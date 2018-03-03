@@ -1,0 +1,43 @@
+version: 2
+jobs:
+  build:
+    steps:
+      - restore_cache:
+          key: dependency-cache
+      - run:
+          name: pre
+          command: |
+            sed -i '/source \/home\/ubuntu\/virtualenvs\//d' ~/.circlerc
+            nvm alias default node
+            npm install -g csslint
+      - run:
+          name: override
+          command: bash .misc/deps.sh
+      - save_cache:
+          key: dependency-cache
+          paths:
+             ~/.pyenv/versions/3.4.4
+             ~/.pyenv/versions/3.5.1
+             ~/nltk_data
+             docs/_build
+
+  test:
+    steps:
+      - run: |
+          py.test
+          pip install pip setuptools -U
+          python setup.py install
+          pip install coala-bears[alldeps] --pre -U
+          pip install -r docs-requirements.txt
+          coala --non-interactive
+          codecov
+          python setup.py docs
+
+workflows:
+  version: 2
+  build-test:
+    jobs:
+      - build
+      - test:
+          requires:
+            -build
